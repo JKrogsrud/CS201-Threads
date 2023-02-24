@@ -3,6 +3,9 @@
 //
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
+#include <pthread.h> // Unix util, thus red underline in Windows
+
 #include "threads.jkrogsru.h"
 
 int main(int argc, char *argv[])
@@ -22,7 +25,34 @@ int main(int argc, char *argv[])
         return 8;
     }
 
-    printf("%s", buffer);
+    // This will print non-sense but the math should work out
+
+//    printf("%d total characters\n", numChars);
+//    printf("%s\n", buffer);
+//    printf("length of buffer: %d\n", strlen(buffer));
+//    printf("char at 31: %d\n", buffer[31]);
+
+    // As 0 appears in pi it gets sent to the true zero character so when attempting
+    // to read this as a string it gets cut off
+
+    // To actually see "pi" digits
+
+//    for (int i = 0; i < numChars; i++)
+//    {
+//        printf("%d", buffer[i]);
+//    }
+//    printf("\n");
+
+    // Here we will create some threads and pass them into findMaxSumSeq function
+    ThreadInfo tdata[NUM_THREADS];
+    pthread_t threadIDs[NUM_THREADS];
+
+    // Initialize arrays
+    for (int i = 0; i < NUM_THREADS; ++i)
+    {
+        tdata[i]
+    }
+
     return 0;
 }
 
@@ -31,6 +61,7 @@ int readFile(char *fileName, int *numChars, char *buffer)
     char line[LINELEN];
     char *chp;
     int len; // for line length in while loop
+    int big_len = 0; // this is the position to write to in larger buffer
 
     FILE *fp = fopen(fileName, "r");
 
@@ -60,10 +91,48 @@ int readFile(char *fileName, int *numChars, char *buffer)
         for (int i = 0; i < len; i++)
         {
             //append contents of the line[] buffer to big buffer
-            buffer[i] = line[i];
+            if (isdigit(line[i])) // This will avoid the '.' in pi
+            {
+                buffer[big_len] = line[i] - 48;
+                big_len++;
+            }
         }
         chp = fgets(line, LINELEN, fp);
     }
 
+    *numChars = big_len;
     return 0;
+}
+
+void *findMaxSumSeq(void *param)
+{
+    // void *param works like the Object type in Java
+    ThreadInfo *data;
+
+    data = (ThreadInfo *) param; // casts param into ThreadInfo* type
+
+    int maxLen = 0, indexOfMax = 0, negIndex, sum;
+    for (int i = data->start; i <= data->end; i++)
+    {
+        negIndex = -1; // We will be moving backwards and subtracting from starting index
+        sum = data->A[i];
+        while (i + negIndex > data->start && sum > 0)
+        {
+            sum -= data->A[i + negIndex];
+            negIndex -= 1;
+        }
+
+        // if the sum is zero, then we have found a worthy candidate
+        if (sum == 0)
+        {
+            if (-negIndex > maxLen)
+            {
+                maxLen = -negIndex;
+                indexOfMax = i;
+            }
+        }
+    }
+
+    data->bestpos = indexOfMax;
+    data->max = maxLen;
 }

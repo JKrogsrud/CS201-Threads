@@ -10,6 +10,14 @@
 #define NUM_THREADS 4
 #define LINELEN 256
 
+typedef struct {
+    char *A;     // The digits themselves
+    int start;   // first position for thread to look at
+    int end;     // last position thread should look at
+    int bestpos; // ending position of the best sequence found by this thread
+    int max;     // length of the best sequence found by this thread
+} ThreadInfo;
+
 /*
  * This function read lines from a specified file and will put each of these lines into a large character buffer
  * On success it returns 0; otherwise a non-zero value.
