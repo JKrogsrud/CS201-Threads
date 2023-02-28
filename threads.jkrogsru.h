@@ -9,6 +9,7 @@
 #define BUFLEN 10100
 #define NUM_THREADS 4
 #define LINELEN 256
+#define PADDING 11
 
 typedef struct {
     char *A;     // The digits themselves

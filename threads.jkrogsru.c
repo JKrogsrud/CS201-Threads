@@ -50,7 +50,56 @@ int main(int argc, char *argv[])
     // Initialize arrays
     for (int i = 0; i < NUM_THREADS; ++i)
     {
-        tdata[i]
+        tdata[i].start = i * (numChars / NUM_THREADS) - PADDING;
+        tdata[i].end = (i + 1)  * (numChars / NUM_THREADS) + PADDING;
+        if (tdata[i].start < 0)
+        {
+            tdata[i].start = 0;
+        }
+        if (tdata[i].end > numChars -1)
+        {
+            tdata[i].end = numChars -1;
+        }
+
+        tdata[i].A = buffer;
+    }
+
+    // create child threads
+    for (int i = 0; i < NUM_THREADS; ++i)
+    {
+        pthread_create(&threadIDs[i], NULL, findMaxSumSeq, &tdata[i]);
+    }
+
+    // wait for child threads to be done
+    for (int i=0; i<NUM_THREADS; ++i)
+        pthread_join(threadIDs[i], NULL);
+
+    // Gather data
+    int longestRun = tdata[0].max;
+    int startingPos = tdata[0].bestpos;
+
+    for (int index = 1; index < NUM_THREADS; ++index)
+    {
+        if (tdata[index].max > longestRun)
+        {
+            longestRun = tdata[index].max;
+            startingPos = tdata[index].bestpos;
+        }
+    }
+
+    printf("Longest desired run: %d, at position %d\n", longestRun, startingPos);
+
+    // Need to actually print out the sequence
+
+    for (int index = -longestRun; index < 0; ++index)
+    {
+        if (index == -1)
+        {
+            printf(" %d= %d\n", buffer[index + startingPos], buffer[startingPos]);
+        }
+        else {
+            printf("%d + ", buffer[index + startingPos]);
+        }
     }
 
     return 0;
