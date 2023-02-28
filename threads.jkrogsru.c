@@ -91,16 +91,67 @@ int main(int argc, char *argv[])
 
     // Need to actually print out the sequence
 
-    for (int index = -longestRun; index < 0; ++index)
+    for (int index = -longestRun + 1; index < 0; ++index)
     {
         if (index == -1)
         {
-            printf(" %d= %d\n", buffer[index + startingPos], buffer[startingPos]);
+            printf("%d = %d\n", buffer[index + startingPos], buffer[startingPos]);
         }
         else {
             printf("%d + ", buffer[index + startingPos]);
         }
     }
+
+    // Graduate Section
+    ThreadInfoExtended tdataE[NUM_THREADS];
+    pthread_t threadIDsE[NUM_THREADS];
+
+    int digits = 2;
+
+    // Initialize arrays
+    for (int i = 0; i < NUM_THREADS; ++i)
+    {
+        // Padding shoudn't be neccessary anymore but I'm leaving it
+        tdataE[i].start = i * (numChars / NUM_THREADS) - PADDING;
+        tdataE[i].end = (i + 1)  * (numChars / NUM_THREADS) + PADDING;
+        if (tdataE[i].start < 0)
+        {
+            tdataE[i].start = 0;
+        }
+        if (tdataE[i].end > numChars -1)
+        {
+            tdataE[i].end = numChars -1;
+        }
+
+        tdataE[i].A = buffer;
+        tdataE[i].digits = digits;
+        tdataE[i].numChars = numChars;
+    }
+
+    // create child threads
+    for (int i = 0; i < NUM_THREADS; ++i)
+    {
+        pthread_create(&threadIDsE[i], NULL, findMaxSumSeqExtended, &tdataE[i]);
+    }
+
+    // wait for child threads to be done
+    for (int i=0; i<NUM_THREADS; ++i)
+        pthread_join(threadIDsE[i], NULL);
+
+    // Gather data
+    int longestRunE = tdataE[0].max;
+    int startingPosE = tdataE[0].bestpos;
+
+    for (int index = 1; index < NUM_THREADS; ++index)
+    {
+        if (tdata[index].max > longestRun)
+        {
+            longestRunE = tdataE[index].max;
+            startingPosE = tdataE[index].bestpos;
+        }
+    }
+
+    printf("Longest desired run with %d digits: %d, at position %d\n", digits, longestRun, startingPos);
 
     return 0;
 }
@@ -178,6 +229,59 @@ void *findMaxSumSeq(void *param)
             {
                 maxLen = -negIndex;
                 indexOfMax = i;
+            }
+        }
+    }
+
+    data->bestpos = indexOfMax;
+    data->max = maxLen;
+}
+
+void *findMaxSumSeqExtended(void *param)
+{
+    // void *param works like the Object type in Java
+    ThreadInfoExtended *data;
+
+    data = (ThreadInfoExtended *) param; // casts param into ThreadInfo* type
+
+    int maxLen = 0, indexOfMax = 0, negIndex, sum, tens, outOfRange;
+
+    for (int i = data->start; i <= data->end; i++)
+    {
+        negIndex = -1; // We will be moving backwards and subtracting from starting index
+        sum = 0;
+        tens = 1;
+        outOfRange = 0;
+        // Build the sum up before subtracting down
+        for (int j = 0; j < data->digits; ++j)
+        {
+            if (i + j < data->numChars)
+            {
+                sum += tens*data->A[i+j];
+                tens *= 10;
+            }
+            else
+            {
+                outOfRange = 1;
+            }
+        }
+
+        if (outOfRange != 1)
+        {
+            while (i + negIndex > 0 && sum > 0)
+            {
+                sum -= data->A[i + negIndex];
+                negIndex -= 1;
+            }
+
+            // if the sum is zero, then we have found a worthy candidate
+            if (sum == 0)
+            {
+                if (-negIndex > maxLen)
+                {
+                    maxLen = -negIndex;
+                    indexOfMax = i;
+                }
             }
         }
     }
