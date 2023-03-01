@@ -111,9 +111,9 @@ int main(int argc, char *argv[])
     // Initialize arrays
     for (int i = 0; i < NUM_THREADS; ++i)
     {
-        // Padding shoudn't be neccessary anymore but I'm leaving it
-        tdataE[i].start = i * (numChars / NUM_THREADS) - PADDING;
-        tdataE[i].end = (i + 1)  * (numChars / NUM_THREADS) + PADDING;
+
+        tdataE[i].start = i * (numChars / NUM_THREADS);
+        tdataE[i].end = (i + 1)  * (numChars / NUM_THREADS);
         if (tdataE[i].start < 0)
         {
             tdataE[i].start = 0;
@@ -144,14 +144,51 @@ int main(int argc, char *argv[])
 
     for (int index = 1; index < NUM_THREADS; ++index)
     {
-        if (tdata[index].max > longestRun)
+        if (tdata[index].max > longestRunE)
         {
             longestRunE = tdataE[index].max;
             startingPosE = tdataE[index].bestpos;
         }
     }
 
-    printf("Longest desired run with %d digits: %d, at position %d\n", digits, longestRun, startingPos);
+    printf("Longest desired run with %d digits: %d, at position %d\n", digits, longestRunE, startingPosE);
+
+    for (int index = -(longestRunE - digits); index < 0; ++index)
+    {
+        if (index == -1)
+        {
+            printf("%d = ", buffer[index + startingPosE]);
+        }
+        else {
+            printf("%d + ", buffer[index + startingPosE]);
+        }
+    }
+    for (int index = 0; index < digits; ++index)
+    {
+        printf("%d", buffer[startingPosE + index]);
+    }
+    printf("\n");
+
+    // Don't seem to be getting instructor's result
+
+    longestRunE = 32;
+    startingPosE = 4806;
+
+    for (int index = -(longestRunE - digits); index < 0; ++index)
+    {
+        if (index == -1)
+        {
+            printf("%d = ", buffer[index + startingPosE]);
+        }
+        else {
+            printf("%d + ", buffer[index + startingPosE]);
+        }
+    }
+    for (int index = 0; index < digits; ++index)
+    {
+        printf("%d", buffer[startingPosE + index]);
+    }
+    printf("\n");
 
     return 0;
 }
@@ -239,53 +276,52 @@ void *findMaxSumSeq(void *param)
 
 void *findMaxSumSeqExtended(void *param)
 {
-    // void *param works like the Object type in Java
     ThreadInfoExtended *data;
 
     data = (ThreadInfoExtended *) param; // casts param into ThreadInfo* type
 
-    int maxLen = 0, indexOfMax = 0, negIndex, sum, tens, outOfRange;
+    int maxLen = 0, indexOfMax = 0, negIndex, sum, tens;
 
     for (int i = data->start; i <= data->end; i++)
     {
         negIndex = -1; // We will be moving backwards and subtracting from starting index
         sum = 0;
         tens = 1;
-        outOfRange = 0;
-        // Build the sum up before subtracting down
-        for (int j = 0; j < data->digits; ++j)
+
+        // Need to create the first multiple of tens spot
+        for (int j = 0; j < data->digits - 1; ++j)
+        {
+            tens *= 10;
+        }
+
+        // Create the sum
+        for(int j = 0; j < data->digits; ++j)
         {
             if (i + j < data->numChars)
             {
-                sum += tens*data->A[i+j];
-                tens *= 10;
-            }
-            else
-            {
-                outOfRange = 1;
+                sum += tens * data->A[i+j];
+                tens /= 10;
             }
         }
 
-        if (outOfRange != 1)
+        while (i + negIndex > 0 && sum >= 0)
         {
-            while (i + negIndex > 0 && sum > 0)
-            {
-                sum -= data->A[i + negIndex];
-                negIndex -= 1;
-            }
+            sum -= data->A[i + negIndex];
+            negIndex -= 1;
+        }
 
-            // if the sum is zero, then we have found a worthy candidate
-            if (sum == 0)
+        // sum should be negative check that adding previous back in makes it 0
+        if (sum + data->A[i + negIndex + 1] == 0)
+        {
+
+            if (-negIndex > maxLen + 1)
             {
-                if (-negIndex > maxLen)
-                {
-                    maxLen = -negIndex;
-                    indexOfMax = i;
-                }
+                maxLen = -negIndex - 1;
+                indexOfMax = i;
             }
         }
     }
 
     data->bestpos = indexOfMax;
-    data->max = maxLen;
+    data->max = maxLen + data->digits - 1;
 }
