@@ -2,9 +2,11 @@
 // Created by Jared Krogsrud on 2/23/2023.
 //
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h> // Unix util, thus red underline in Windows
+#include <sys/time.h>
 
 #include "threads.jkrogsru.h"
 
@@ -136,7 +138,260 @@ int main(int argc, char *argv[])
 
     displayResults(startingPosE, longestRunE, digits, buffer);
 
-    // Display the results of timing
+    /**
+     *  Here we will run some experiments on some random sets
+     *  of numbers of sizes 100,000, 1,000,000 and 10,000,000
+     *  and thread counts of 1, 2, 4, 8, 16
+     */
+
+    // First we generate a character arrays of random ints
+
+    int buffLens[3] = {10000, 100000, 1000000};
+    int threadCounts[5] = {1, 2, 4, 8, 16};
+
+    printf("Loc 1\n");
+
+    char buffer1[buffLens[0]];
+    char buffer2[buffLens[1]];
+    char buffer3[buffLens[2]];
+
+    int r;
+    int digitTest = 2;
+    FILE *fp;
+    char* fileName = "thread_timing.txt";
+
+    struct timeval start, finish;
+    struct timezone tzone;
+    long timeUsed;
+
+
+    // Initialize random number generator
+    srand(time(NULL));
+
+    // Initialize the random buffers
+    // buffer1
+    for (int i = 0; i < buffLens[0]; ++i)
+    {
+        r = rand() % 10;
+        buffer1[i] = r;
+    }
+
+    // buffer2
+    for (int i = 0; i < buffLens[1]; ++i)
+    {
+        r = rand() % 10;
+        buffer2[i] = r;
+    }
+
+    // buffer3
+    for (int i = 0; i < buffLens[2]; ++i)
+    {
+        r = rand() % 10;
+        buffer3[i] = r;
+    }
+
+    // open file for writing
+    fp = fopen(fileName, "w");
+
+    // check if opened successfully
+    if (fp == NULL)
+    {
+        printf("Error opening: %s\n", fileName);
+        return 8;
+    }
+
+    printf("Loc 2\n");
+
+    for (int digit = 1; digit <= 3; ++digit)
+    {
+        // Buffer 1
+        // Run once per thread count
+        for (int threadCounter = 0; threadCounter < 5; ++threadCounter)
+        {
+            // Start Timer
+            gettimeofday(&start, &tzone);
+
+            int numThreads = threadCounts[threadCounter];
+            ThreadInfoExtended tdataExperiment[numThreads];
+            pthread_t threadIDsExperiment[numThreads];
+
+            // Initialize arrays
+            for (int i = 0; i < numThreads; ++i)
+            {
+
+                tdataExperiment[i].start = i * (buffLens[0] / numThreads);
+                tdataExperiment[i].end = (i + 1)  * (buffLens[0] / numThreads);
+                if (tdataExperiment[i].start < 0)
+                {
+                    tdataExperiment[i].start = 0;
+                }
+                if (tdataExperiment[i].end > buffLens[0] -1)
+                {
+                    tdataExperiment[i].end = buffLens[0] -1;
+                }
+
+                tdataExperiment[i].A = buffer1;
+                tdataExperiment[i].digits = digitTest;
+                tdataExperiment[i].numChars = buffLens[0];
+            }
+
+            // begin search!
+            // create child threads
+            for (int i = 0; i < numThreads; ++i)
+            {
+                pthread_create(&threadIDsExperiment[i], NULL, findMaxSumSeqExtended, &tdataExperiment[i]);
+            }
+
+            // wait for child threads to be done
+            for (int i=0; i<numThreads; ++i)
+                pthread_join(threadIDsExperiment[i], NULL);
+
+            // Gather data
+            int longestRunExperiment = tdataExperiment[0].max;
+            int startingPosExperiment = tdataExperiment[0].bestpos;
+
+            for (int index = 1; index < numThreads; ++index)
+            {
+                if (tdataExperiment[index].max > longestRunExperiment)
+                {
+                    longestRunExperiment = tdataExperiment[index].max;
+                    startingPosExperiment = tdataExperiment[index].bestpos;
+                }
+            }
+
+            // End timer
+            gettimeofday(&finish, &tzone);
+            timeUsed = finish.tv_usec - start.tv_usec;
+            // Write Data to file
+            fprintf(fp, "%d,%d,%d,%lu\n", digit, buffLens[0], numThreads, timeUsed);
+        }
+
+        // Buffer 2
+        // Run once per thread count
+        for (int threadCounter = 0; threadCounter < 5; ++threadCounter)
+        {
+            // Start Timer
+            gettimeofday(&start, &tzone);
+
+            int numThreads = threadCounts[threadCounter];
+            ThreadInfoExtended tdataExperiment[numThreads];
+            pthread_t threadIDsExperiment[numThreads];
+
+            // Initialize arrays
+            for (int i = 0; i < numThreads; ++i)
+            {
+
+                tdataExperiment[i].start = i * (buffLens[1] / numThreads);
+                tdataExperiment[i].end = (i + 1)  * (buffLens[1] / numThreads);
+                if (tdataExperiment[i].start < 0)
+                {
+                    tdataExperiment[i].start = 0;
+                }
+                if (tdataExperiment[i].end > buffLens[1] -1)
+                {
+                    tdataExperiment[i].end = buffLens[1] -1;
+                }
+
+                tdataExperiment[i].A = buffer2;
+                tdataExperiment[i].digits = digitTest;
+                tdataExperiment[i].numChars = buffLens[1];
+            }
+
+            // begin search!
+            // create child threads
+            for (int i = 0; i < numThreads; ++i)
+            {
+                pthread_create(&threadIDsExperiment[i], NULL, findMaxSumSeqExtended, &tdataExperiment[i]);
+            }
+
+            // wait for child threads to be done
+            for (int i=0; i<numThreads; ++i)
+                pthread_join(threadIDsExperiment[i], NULL);
+
+            // Gather data
+            int longestRunExperiment = tdataExperiment[0].max;
+            int startingPosExperiment = tdataExperiment[0].bestpos;
+
+            for (int index = 1; index < numThreads; ++index)
+            {
+                if (tdataExperiment[index].max > longestRunExperiment)
+                {
+                    longestRunExperiment = tdataExperiment[index].max;
+                    startingPosExperiment = tdataExperiment[index].bestpos;
+                }
+            }
+
+            // End timer
+            gettimeofday(&finish, &tzone);
+            timeUsed = finish.tv_usec - start.tv_usec;
+            // Write Data to file
+            fprintf(fp, "%d,%d,%d,%lu\n", digit, buffLens[1], numThreads, timeUsed);
+        }
+
+        // Buffer 3
+        // Run once per thread count
+        for (int threadCounter = 0; threadCounter < 5; ++threadCounter)
+        {
+            // Start Timer
+            gettimeofday(&start, &tzone);
+
+            int numThreads = threadCounts[threadCounter];
+            ThreadInfoExtended tdataExperiment[numThreads];
+            pthread_t threadIDsExperiment[numThreads];
+
+            // Initialize arrays
+            for (int i = 0; i < numThreads; ++i)
+            {
+
+                tdataExperiment[i].start = i * (buffLens[2] / numThreads);
+                tdataExperiment[i].end = (i + 1)  * (buffLens[2] / numThreads);
+                if (tdataExperiment[i].start < 0)
+                {
+                    tdataExperiment[i].start = 0;
+                }
+                if (tdataExperiment[i].end > buffLens[2] -1)
+                {
+                    tdataExperiment[i].end = buffLens[2] -1;
+                }
+
+                tdataExperiment[i].A = buffer3;
+                tdataExperiment[i].digits = digitTest;
+                tdataExperiment[i].numChars = buffLens[2];
+            }
+
+            // begin search!
+            // create child threads
+            for (int i = 0; i < numThreads; ++i)
+            {
+                pthread_create(&threadIDsExperiment[i], NULL, findMaxSumSeqExtended, &tdataExperiment[i]);
+            }
+
+            // wait for child threads to be done
+            for (int i=0; i<numThreads; ++i)
+                pthread_join(threadIDsExperiment[i], NULL);
+
+            // Gather data
+            int longestRunExperiment = tdataExperiment[0].max;
+            int startingPosExperiment = tdataExperiment[0].bestpos;
+
+            for (int index = 1; index < numThreads; ++index)
+            {
+                if (tdataExperiment[index].max > longestRunExperiment)
+                {
+                    longestRunExperiment = tdataExperiment[index].max;
+                    startingPosExperiment = tdataExperiment[index].bestpos;
+                }
+            }
+
+            // End timer
+            gettimeofday(&finish, &tzone);
+            timeUsed = finish.tv_usec - start.tv_usec;
+            // Write Data to file
+            fprintf(fp, "%d,%d,%d,%lu\n", digit, buffLens[2], numThreads, timeUsed);
+        }
+    }
+
+    fclose(fp);
 
     return 0;
 }
