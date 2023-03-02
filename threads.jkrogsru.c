@@ -19,29 +19,12 @@ int main(int argc, char *argv[])
         return 8;
     }
 
+    // Read in File
     rc = readFile(argv[1], &numChars, buffer);
     if (rc !=0)
     {
         return 8;
     }
-
-    // This will print non-sense but the math should work out
-
-//    printf("%d total characters\n", numChars);
-//    printf("%s\n", buffer);
-//    printf("length of buffer: %d\n", strlen(buffer));
-//    printf("char at 31: %d\n", buffer[31]);
-
-    // As 0 appears in pi it gets sent to the true zero character so when attempting
-    // to read this as a string it gets cut off
-
-    // To actually see "pi" digits
-
-//    for (int i = 0; i < numChars; i++)
-//    {
-//        printf("%d", buffer[i]);
-//    }
-//    printf("\n");
 
     // Here we will create some threads and pass them into findMaxSumSeq function
     ThreadInfo tdata[NUM_THREADS];
@@ -87,22 +70,22 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("Longest desired run: %d, at position %d\n", longestRun, startingPos);
+    // Display results
+    displayResults(startingPos, longestRun, 1, buffer);
 
-    // Need to actually print out the sequence
-
-    for (int index = -longestRun + 1; index < 0; ++index)
-    {
-        if (index == -1)
-        {
-            printf("%d = %d\n", buffer[index + startingPos], buffer[startingPos]);
-        }
-        else {
-            printf("%d + ", buffer[index + startingPos]);
-        }
-    }
-
-    // Graduate Section
+    /**
+      *   GRADUATE SECTION
+      *   Here you will find a generalized function wherein you can input the
+      *   number digits you want the tail end of the max sum sequence to be.
+      *
+      *   That is the first problem had digits = 1, and the grad section has
+      *   digits = 2. But we can experiment further.
+      *
+      *   Also found below is a means of timing how long it takes on these lists
+      *   so that we may see the benefits of using multiple threads should we run
+      *   this many times. Data is gathered by openeing a shared file and
+      *   writing data in a csv file to be easier to visualize later.
+      */
     ThreadInfoExtended tdataE[NUM_THREADS];
     pthread_t threadIDsE[NUM_THREADS];
 
@@ -144,51 +127,16 @@ int main(int argc, char *argv[])
 
     for (int index = 1; index < NUM_THREADS; ++index)
     {
-        if (tdata[index].max > longestRunE)
+        if (tdataE[index].max > longestRunE)
         {
             longestRunE = tdataE[index].max;
             startingPosE = tdataE[index].bestpos;
         }
     }
 
-    printf("Longest desired run with %d digits: %d, at position %d\n", digits, longestRunE, startingPosE);
+    displayResults(startingPosE, longestRunE, digits, buffer);
 
-    for (int index = -(longestRunE - digits); index < 0; ++index)
-    {
-        if (index == -1)
-        {
-            printf("%d = ", buffer[index + startingPosE]);
-        }
-        else {
-            printf("%d + ", buffer[index + startingPosE]);
-        }
-    }
-    for (int index = 0; index < digits; ++index)
-    {
-        printf("%d", buffer[startingPosE + index]);
-    }
-    printf("\n");
-
-    // Don't seem to be getting instructor's result
-
-    longestRunE = 32;
-    startingPosE = 4806;
-
-    for (int index = -(longestRunE - digits); index < 0; ++index)
-    {
-        if (index == -1)
-        {
-            printf("%d = ", buffer[index + startingPosE]);
-        }
-        else {
-            printf("%d + ", buffer[index + startingPosE]);
-        }
-    }
-    for (int index = 0; index < digits; ++index)
-    {
-        printf("%d", buffer[startingPosE + index]);
-    }
-    printf("\n");
+    // Display the results of timing
 
     return 0;
 }
@@ -253,14 +201,14 @@ void *findMaxSumSeq(void *param)
     {
         negIndex = -1; // We will be moving backwards and subtracting from starting index
         sum = data->A[i];
-        while (i + negIndex > data->start && sum > 0)
+        while (i + negIndex > data->start && sum >= 0)
         {
             sum -= data->A[i + negIndex];
             negIndex -= 1;
         }
 
-        // if the sum is zero, then we have found a worthy candidate
-        if (sum == 0)
+        //
+        if (sum + data->A[i + negIndex + 1] == 0)
         {
             if (-negIndex > maxLen)
             {
@@ -271,7 +219,7 @@ void *findMaxSumSeq(void *param)
     }
 
     data->bestpos = indexOfMax;
-    data->max = maxLen;
+    data->max = maxLen - 1;
 }
 
 void *findMaxSumSeqExtended(void *param)
@@ -313,15 +261,35 @@ void *findMaxSumSeqExtended(void *param)
         // sum should be negative check that adding previous back in makes it 0
         if (sum + data->A[i + negIndex + 1] == 0)
         {
-
-            if (-negIndex > maxLen + 1)
+            if (-negIndex > maxLen)
             {
-                maxLen = -negIndex - 1;
+                maxLen = -negIndex;
                 indexOfMax = i;
             }
         }
     }
 
     data->bestpos = indexOfMax;
-    data->max = maxLen + data->digits - 1;
+    data->max = maxLen;
+}
+
+int displayResults(int indexOfMax, int maxLength, int digits, char *buffer)
+{
+    printf("Longest desired run with %d digits: %d, at position %d\n", digits, maxLength, indexOfMax);
+
+    for (int index = -(maxLength - digits); index < 0; ++index)
+    {
+        if (index == -1)
+        {
+            printf("%d = ", buffer[index + indexOfMax]);
+        }
+        else {
+            printf("%d + ", buffer[index + indexOfMax]);
+        }
+    }
+    for (int index = 0; index < digits; ++index)
+    {
+        printf("%d", buffer[indexOfMax + index]);
+    }
+    printf("\n");
 }

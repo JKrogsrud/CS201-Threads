@@ -48,4 +48,8 @@ void *findMaxSumSeq(void *param);
  */
 void *findMaxSumSeqExtended(void *param);
 
+// Displays the results found in findMaxSumSeqExtended
+// in a nice manner
+int displayResults(int indexOfMax, int maxLength, int digits, char *buffer);
+
 #endif //THREADS_THREADS_JKROGSRU_H
